@@ -6,7 +6,7 @@ monitor.setCursorPos(1, 1)
 
 local items = me.listItems()
 
--- Find an item that should be an ingot
+-- Find an ingot
 local testItem = nil
 for _, item in ipairs(items) do
     if item.name:find("ingot") then
@@ -16,32 +16,25 @@ for _, item in ipairs(items) do
 end
 
 if testItem then
-    monitor.write("Found ingot in list:")
+    monitor.write("Item: " .. testItem.name)
     monitor.setCursorPos(1, 2)
-    monitor.write(testItem.name)
+    monitor.write("Amount: " .. testItem.amount)
     
-    local row = 3
-    monitor.setCursorPos(1, row)
-    monitor.write("Keys in item:")
+    monitor.setCursorPos(1, 3)
+    monitor.write("--- Tags ---")
     
-    -- Print all keys in the item
-    for key, value in pairs(testItem) do
-        row = row + 1
+    local row = 4
+    if testItem.tags then
+        -- Print all tags
+        for tagKey, tagValue in pairs(testItem.tags) do
+            monitor.setCursorPos(1, row)
+            monitor.write(tagKey .. " = " .. tostring(tagValue))
+            row = row + 1
+            
+            if row > 15 then break end -- Stop if too many
+        end
+    else
         monitor.setCursorPos(1, row)
-        monitor.write(key .. " = " .. tostring(value))
-    end
-else
-    monitor.write("No ingots in listItems()")
-    
-    -- Try getting gold ingot directly
-    monitor.setCursorPos(1, 2)
-    monitor.write("Trying getItem()...")
-    
-    local goldIngot = me.getItem({name = "minecraft:gold_ingot"})
-    if goldIngot then
-        monitor.setCursorPos(1, 3)
-        monitor.write("getItem works!")
-        monitor.setCursorPos(1, 4)
-        monitor.write("Has tags: " .. tostring(goldIngot.tags ~= nil))
+        monitor.write("No tags found")
     end
 end
