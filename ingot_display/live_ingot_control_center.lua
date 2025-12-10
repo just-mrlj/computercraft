@@ -227,26 +227,6 @@ local function displayIngots()
     monitor.write(title)
     monitor.setBackgroundColor(COLORS.background)
     
-    -- ===== CONTROL BUTTONS =====
-    local buttonY = 3
-    local buttonWidth = 11
-    local spacing = 1
-    
-    -- Row 1: Sort buttons
-    drawButton(2, buttonY, buttonWidth, "By Amount", sortMode == "amount")
-    drawButton(2 + buttonWidth + spacing, buttonY, buttonWidth, "By Name", sortMode == "name")
-    
-    -- Row 2: Filter buttons
-    buttonY = buttonY + 2
-    drawButton(2, buttonY, buttonWidth, "All", minAmount == 0)
-    drawButton(2 + buttonWidth + spacing, buttonY, buttonWidth, "100+", minAmount == 100)
-    drawButton(2 + (buttonWidth + spacing) * 2, buttonY, buttonWidth, "1000+", minAmount == 1000)
-    drawButton(2 + (buttonWidth + spacing) * 3, buttonY, buttonWidth, "10000+", minAmount == 10000)
-    
-    -- Theme button (right side)
-    local themeButtonWidth = 14
-    drawButton(w - themeButtonWidth - 1, 3, themeButtonWidth, "Theme", false)
-    
     -- ===== GET AND FILTER ITEMS =====
     local items = me.listItems()
     local ingots = {}
@@ -275,7 +255,7 @@ local function displayIngots()
         totalAmount = totalAmount + ingot.amount
     end
     
-    local statsY = buttonY + 2
+    local statsY = 3
     monitor.setTextColor(COLORS.statsText)
     monitor.setCursorPos(2, statsY)
     monitor.write("Types: " .. #ingots)
@@ -289,9 +269,10 @@ local function displayIngots()
     
     -- ===== DISPLAY INGOTS =====
     local startRow = statsY + 2
+    local endRow = h - 4 -- Leave space for buttons at bottom
     for i, item in ipairs(ingots) do
         local currentRow = startRow + i - 1
-        if currentRow > h - 1 then break end -- Save space for footer
+        if currentRow > endRow then break end
         
         monitor.setCursorPos(2, currentRow)
         
@@ -314,18 +295,38 @@ local function displayIngots()
         monitor.write(amountStr)
     end
     
-    -- ===== FOOTER =====
+    -- ===== CONTROL BUTTONS AT BOTTOM =====
+    local buttonWidth = 11
+    local spacing = 1
+    local buttonY = h - 2
+    
+    -- Separator line above buttons
+    monitor.setTextColor(COLORS.footerText)
+    monitor.setCursorPos(1, buttonY - 1)
+    monitor.write(string.rep("-", w))
+    
+    -- Row 1: Sort and Theme buttons
+    drawButton(2, buttonY, buttonWidth, "By Amount", sortMode == "amount")
+    drawButton(2 + buttonWidth + spacing, buttonY, buttonWidth, "By Name", sortMode == "name")
+    
+    -- Theme button (right side)
+    local themeButtonWidth = 14
+    drawButton(w - themeButtonWidth - 1, buttonY, themeButtonWidth, "Theme", false)
+    
+    -- Row 2: Filter buttons
+    buttonY = buttonY + 1
+    drawButton(2, buttonY, buttonWidth, "All", minAmount == 0)
+    drawButton(2 + buttonWidth + spacing, buttonY, buttonWidth, "100+", minAmount == 100)
+    drawButton(2 + (buttonWidth + spacing) * 2, buttonY, buttonWidth, "1000+", minAmount == 1000)
+    drawButton(2 + (buttonWidth + spacing) * 3, buttonY, buttonWidth, "10000+", minAmount == 10000)
+    
+    -- Timestamp (bottom right)
     if CONFIG.showTimestamp then
         monitor.setTextColor(COLORS.footerText)
-        monitor.setCursorPos(2, h)
-        monitor.write(os.date("%H:%M:%S"))
+        local timeStr = os.date("%H:%M:%S")
+        monitor.setCursorPos(w - #timeStr - 1, buttonY)
+        monitor.write(timeStr)
     end
-    
-    -- Help text
-    monitor.setTextColor(COLORS.footerText)
-    local helpText = "Click buttons to change view"
-    monitor.setCursorPos(w - #helpText - 1, h)
-    monitor.write(helpText)
 end
 
 -- ===================================
@@ -333,38 +334,38 @@ end
 -- ===================================
 
 local function handleClick(x, y)
-    local w = monitor.getSize()
+    local w, h = monitor.getSize()
     local buttonWidth = 11
     local spacing = 1
     
-    -- Sort buttons (row 3)
-    if isInButton(x, y, 2, 3, buttonWidth) then
+    -- Sort buttons (row h-2)
+    if isInButton(x, y, 2, h - 2, buttonWidth) then
         sortMode = "amount"
         return true
-    elseif isInButton(x, y, 2 + buttonWidth + spacing, 3, buttonWidth) then
+    elseif isInButton(x, y, 2 + buttonWidth + spacing, h - 2, buttonWidth) then
         sortMode = "name"
-        return true
-    end
-    
-    -- Filter buttons (row 5)
-    if isInButton(x, y, 2, 5, buttonWidth) then
-        minAmount = 0
-        return true
-    elseif isInButton(x, y, 2 + buttonWidth + spacing, 5, buttonWidth) then
-        minAmount = 100
-        return true
-    elseif isInButton(x, y, 2 + (buttonWidth + spacing) * 2, 5, buttonWidth) then
-        minAmount = 1000
-        return true
-    elseif isInButton(x, y, 2 + (buttonWidth + spacing) * 3, 5, buttonWidth) then
-        minAmount = 10000
         return true
     end
     
     -- Theme button
     local themeButtonWidth = 14
-    if isInButton(x, y, w - themeButtonWidth - 1, 3, themeButtonWidth) then
+    if isInButton(x, y, w - themeButtonWidth - 1, h - 2, themeButtonWidth) then
         nextTheme()
+        return true
+    end
+    
+    -- Filter buttons (row h-1)
+    if isInButton(x, y, 2, h - 1, buttonWidth) then
+        minAmount = 0
+        return true
+    elseif isInButton(x, y, 2 + buttonWidth + spacing, h - 1, buttonWidth) then
+        minAmount = 100
+        return true
+    elseif isInButton(x, y, 2 + (buttonWidth + spacing) * 2, h - 1, buttonWidth) then
+        minAmount = 1000
+        return true
+    elseif isInButton(x, y, 2 + (buttonWidth + spacing) * 3, h - 1, buttonWidth) then
+        minAmount = 10000
         return true
     end
     
