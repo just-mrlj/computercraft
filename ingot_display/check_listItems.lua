@@ -25,14 +25,25 @@ if testItem then
     
     local row = 4
     if testItem.tags then
-        -- Print all tags
-        for tagKey, tagValue in pairs(testItem.tags) do
-            monitor.setCursorPos(1, row)
-            monitor.write(tagKey .. " = " .. tostring(tagValue))
-            row = row + 1
-            
-            if row > 15 then break end -- Stop if too many
+        -- Check if tags is a table and iterate
+        if type(testItem.tags) == "table" then
+            for tagKey, tagValue in pairs(testItem.tags) do
+                monitor.setCursorPos(1, row)
+                -- Handle nested values
+                if type(tagValue) == "table" then
+                    monitor.write(tagKey .. " = [table]")
+                else
+                    monitor.write(tagKey .. " = " .. tostring(tagValue))
+                end
+                row = row + 1
+                
+                if row > 15 then break end
+            end
         end
+        
+        -- Also check count
+        monitor.setCursorPos(1, row)
+        monitor.write("Tag count: " .. #testItem.tags)
     else
         monitor.setCursorPos(1, row)
         monitor.write("No tags found")
