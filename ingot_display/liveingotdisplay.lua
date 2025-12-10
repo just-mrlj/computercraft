@@ -13,19 +13,27 @@ local function displayIngots()
     local items = me.listItems()
     local ingots = {}
     
-    -- Filter by tag
+    -- Filter ingots
     for _, item in ipairs(items) do
-        if item.tags and item.tags["minecraft:item/forge:ingots"] then
-            table.insert(ingots, item)
+        if item.tags then
+            for _, tag in ipairs(item.tags) do
+                if tag == "minecraft:item/forge:ingots" then
+                    table.insert(ingots, item)
+                    break
+                end
+            end
         end
     end
     
-    -- Sort by amount
+    -- Sort by amount (highest first)
     table.sort(ingots, function(a, b) return a.amount > b.amount end)
+    
+    monitor.setCursorPos(1, 2)
+    monitor.write("Total ingots: " .. #ingots)
     
     -- Display
     for i, item in ipairs(ingots) do
-        monitor.setCursorPos(1, i + 1)
+        monitor.setCursorPos(1, i + 2)
         monitor.write(item.displayName .. ": " .. item.amount)
     end
 end
