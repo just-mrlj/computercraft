@@ -14,7 +14,7 @@ local CONFIG = {
     refreshRate = 5,
     textScale = 0.5,
     showTimestamp = true,
-    reconnectDelay = 2, -- seconds to wait before reconnecting
+    reconnectDelay = 5, -- seconds to wait before reconnecting
     amountThresholds = {
         high = 10000,
         medium = 1000,
@@ -27,8 +27,8 @@ local CONFIG = {
 -- ===================================
 
 local THEMES = {
-    default = {
-        name = "Default",
+    computercraft = {
+        name = "CC",
         titleBar = colors.blue,
         titleText = colors.white,
         background = colors.black,
@@ -142,7 +142,7 @@ local THEMES = {
     }
 }
 
-local THEME_ORDER = {"default", "ocean", "forest", "fire", "dark", "neon"}
+local THEME_ORDER = {"neon", "ocean", "forest", "fire", "dark", "computercraft"}
 local currentThemeIndex = 1
 local COLORS = THEMES[THEME_ORDER[currentThemeIndex]]
 
