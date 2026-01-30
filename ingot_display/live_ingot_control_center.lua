@@ -1,11 +1,9 @@
 -- ===================================
--- ME INGOT DISPLAY - Enhanced Version
+-- ME INGOT DISPLAY - Crash Resistant
 -- ===================================
 
-local me = peripheral.find("meBridge")
 local monitor = peripheral.find("monitor")
 
-if not me then error("ME Bridge not found!") end
 if not monitor then error("Monitor not found!") end
 
 -- ===================================
@@ -13,10 +11,11 @@ if not monitor then error("Monitor not found!") end
 -- ===================================
 
 local CONFIG = {
-    refreshRate = 5,      -- seconds between auto-refresh
-    textScale = 0.5,      -- monitor text scale
-    showTimestamp = true, -- show time in footer
-    amountThresholds = {  -- color thresholds
+    refreshRate = 5,
+    textScale = 0.5,
+    showTimestamp = true,
+    reconnectDelay = 5, -- seconds to wait before reconnecting
+    amountThresholds = {
         high = 10000,
         medium = 1000,
         low = 100
@@ -28,8 +27,8 @@ local CONFIG = {
 -- ===================================
 
 local THEMES = {
-    default = {
-        name = "Default",
+    computercraft = {
+        name = "CC",
         titleBar = colors.blue,
         titleText = colors.white,
         background = colors.black,
@@ -43,7 +42,8 @@ local THEMES = {
         amount_verylow = colors.orange,
         statsText = colors.yellow,
         normalText = colors.white,
-        footerText = colors.gray
+        footerText = colors.gray,
+        errorText = colors.red
     },
     
     ocean = {
@@ -61,7 +61,8 @@ local THEMES = {
         amount_verylow = colors.blue,
         statsText = colors.lightBlue,
         normalText = colors.white,
-        footerText = colors.gray
+        footerText = colors.gray,
+        errorText = colors.red
     },
     
     forest = {
@@ -79,7 +80,8 @@ local THEMES = {
         amount_verylow = colors.orange,
         statsText = colors.lime,
         normalText = colors.white,
-        footerText = colors.gray
+        footerText = colors.gray,
+        errorText = colors.red
     },
     
     fire = {
@@ -97,7 +99,8 @@ local THEMES = {
         amount_verylow = colors.pink,
         statsText = colors.orange,
         normalText = colors.white,
-        footerText = colors.gray
+        footerText = colors.gray,
+        errorText = colors.white
     },
     
     dark = {
@@ -115,7 +118,8 @@ local THEMES = {
         amount_verylow = colors.gray,
         statsText = colors.lightGray,
         normalText = colors.white,
-        footerText = colors.gray
+        footerText = colors.gray,
+        errorText = colors.red
     },
     
     neon = {
@@ -133,12 +137,12 @@ local THEMES = {
         amount_verylow = colors.blue,
         statsText = colors.pink,
         normalText = colors.white,
-        footerText = colors.gray
+        footerText = colors.gray,
+        errorText = colors.red
     }
 }
 
--- Theme names in order for cycling
-local THEME_ORDER = {"default", "ocean", "forest", "fire", "dark", "neon"}
+local THEME_ORDER = {"neon", "ocean", "forest", "fire", "dark", "computercraft"}
 local currentThemeIndex = 1
 local COLORS = THEMES[THEME_ORDER[currentThemeIndex]]
 
@@ -146,14 +150,73 @@ local COLORS = THEMES[THEME_ORDER[currentThemeIndex]]
 -- STATE VARIABLES
 -- ===================================
 
-local sortMode = "amount" -- "amount" or "name"
-local minAmount = 0        -- Filter threshold
+local me = nil  -- Will be set by connectME()
+local sortMode = "amount"
+local minAmount = 0
+local lastError = nil
+local connectionStatus = "disconnected"
+
+-- ===================================
+-- ME CONNECTION HANDLING
+-- ===================================
+
+-- Try to connect to ME system
+local function connectME()
+    me = peripheral.find("meBridge")
+    if me then
+        connectionStatus = "connected"
+        lastError = nil
+        return true
+    else
+        connectionStatus = "disconnected"
+        lastError = "ME Bridge not found"
+        return false
+    end
+end
+
+-- Check if ME is still connected
+local function checkMEConnection()
+    if not me then
+        return false
+    end
+    
+    -- Try a simple operation to verify connection
+    local success, result = pcall(function()
+        return me.listItems ~= nil
+    end)
+    
+    if not success or not result then
+        connectionStatus = "disconnected"
+        me = nil
+        return false
+    end
+    
+    return true
+end
+
+-- Safe wrapper for ME operations
+local function safeMECall(func)
+    if not checkMEConnection() then
+        return nil, "ME system disconnected"
+    end
+    
+    local success, result = pcall(func)
+    
+    if not success then
+        lastError = result
+        connectionStatus = "error"
+        -- Try to reconnect
+        me = nil
+        return nil, result
+    end
+    
+    return result, nil
+end
 
 -- ===================================
 -- HELPER FUNCTIONS
 -- ===================================
 
--- Format large numbers with commas
 local function formatNumber(num)
     local formatted = tostring(num)
     local k
@@ -164,7 +227,6 @@ local function formatNumber(num)
     return formatted
 end
 
--- Draw a button
 local function drawButton(x, y, width, text, isActive)
     local bgColor = isActive and COLORS.buttonActive or COLORS.buttonInactive
     local textColor = isActive and COLORS.buttonActiveText or COLORS.buttonText
@@ -173,18 +235,15 @@ local function drawButton(x, y, width, text, isActive)
     monitor.setTextColor(textColor)
     monitor.setCursorPos(x, y)
     
-    -- Center text in button
     local padding = math.floor((width - #text) / 2)
     monitor.write(string.rep(" ", padding) .. text .. string.rep(" ", width - #text - padding))
     monitor.setBackgroundColor(COLORS.background)
 end
 
--- Check if coordinates are within a button
 local function isInButton(x, y, btnX, btnY, btnWidth)
     return x >= btnX and x < btnX + btnWidth and y == btnY
 end
 
--- Get color based on amount
 local function getAmountColor(amount)
     if amount >= CONFIG.amountThresholds.high then
         return COLORS.amount_high
@@ -197,7 +256,6 @@ local function getAmountColor(amount)
     end
 end
 
--- Cycle to next theme
 local function nextTheme()
     currentThemeIndex = currentThemeIndex + 1
     if currentThemeIndex > #THEME_ORDER then
@@ -207,10 +265,66 @@ local function nextTheme()
 end
 
 -- ===================================
+-- ERROR DISPLAY
+-- ===================================
+
+local function displayError(errorMsg)
+    monitor.setTextScale(CONFIG.textScale)
+    monitor.setBackgroundColor(COLORS.background)
+    monitor.clear()
+    
+    local w, h = monitor.getSize()
+    
+    -- Title bar
+    monitor.setBackgroundColor(COLORS.titleBar)
+    monitor.setCursorPos(1, 1)
+    monitor.clearLine()
+    monitor.setTextColor(COLORS.titleText)
+    local title = "ME SYSTEM - ERROR"
+    monitor.setCursorPos(math.floor((w - #title) / 2), 1)
+    monitor.write(title)
+    monitor.setBackgroundColor(COLORS.background)
+    
+    -- Error message
+    monitor.setTextColor(COLORS.errorText)
+    local centerY = math.floor(h / 2)
+    
+    monitor.setCursorPos(2, centerY - 2)
+    monitor.write("CONNECTION LOST")
+    
+    monitor.setTextColor(COLORS.normalText)
+    monitor.setCursorPos(2, centerY)
+    monitor.write("Attempting to reconnect...")
+    
+    if errorMsg then
+        monitor.setTextColor(COLORS.footerText)
+        monitor.setCursorPos(2, centerY + 2)
+        -- Wrap error message if too long
+        if #errorMsg > w - 4 then
+            errorMsg = errorMsg:sub(1, w - 7) .. "..."
+        end
+        monitor.write("Error: " .. errorMsg)
+    end
+    
+    -- Status indicator
+    monitor.setTextColor(COLORS.footerText)
+    monitor.setCursorPos(2, h)
+    monitor.write("Status: " .. connectionStatus)
+    monitor.setCursorPos(w - 8, h)
+    monitor.write(os.date("%H:%M:%S"))
+end
+
+-- ===================================
 -- DISPLAY FUNCTIONS
 -- ===================================
 
 local function displayIngots()
+    -- Check connection first
+    if not checkMEConnection() then
+        displayError(lastError)
+        return false
+    end
+    
     monitor.setTextScale(CONFIG.textScale)
     monitor.setBackgroundColor(COLORS.background)
     monitor.clear()
@@ -228,7 +342,15 @@ local function displayIngots()
     monitor.setBackgroundColor(COLORS.background)
     
     -- ===== GET AND FILTER ITEMS =====
-    local items = me.listItems()
+    local items, err = safeMECall(function()
+        return me.listItems()
+    end)
+    
+    if not items then
+        displayError(err)
+        return false
+    end
+    
     local ingots = {}
     
     for _, item in ipairs(items) do
@@ -262,6 +384,11 @@ local function displayIngots()
     monitor.setCursorPos(15, statsY)
     monitor.write("Total: " .. formatNumber(totalAmount))
     
+    -- Connection status indicator (small dot)
+    monitor.setTextColor(COLORS.amount_high)
+    monitor.setCursorPos(w - 1, statsY)
+    monitor.write("*")
+    
     -- Separator line
     monitor.setTextColor(COLORS.footerText)
     monitor.setCursorPos(1, statsY + 1)
@@ -269,17 +396,14 @@ local function displayIngots()
     
     -- ===== DISPLAY INGOTS =====
     local startRow = statsY + 2
-    local endRow = h - 4 -- Leave space for buttons at bottom
+    local endRow = h - 4
     for i, item in ipairs(ingots) do
         local currentRow = startRow + i - 1
         if currentRow > endRow then break end
         
         monitor.setCursorPos(2, currentRow)
-        
-        -- Set color based on amount
         monitor.setTextColor(getAmountColor(item.amount))
         
-        -- Format item name (shorten if needed)
         local name = item.displayName
         local maxNameLen = w - 16
         if #name > maxNameLen then
@@ -288,7 +412,6 @@ local function displayIngots()
         
         monitor.write(name)
         
-        -- Right-align the amount
         local amountStr = formatNumber(item.amount)
         monitor.setCursorPos(w - #amountStr - 1, currentRow)
         monitor.setTextColor(COLORS.normalText)
@@ -300,33 +423,30 @@ local function displayIngots()
     local spacing = 1
     local buttonY = h - 2
     
-    -- Separator line above buttons
     monitor.setTextColor(COLORS.footerText)
     monitor.setCursorPos(1, buttonY - 1)
     monitor.write(string.rep("-", w))
     
-    -- Row 1: Sort and Theme buttons
     drawButton(2, buttonY, buttonWidth, "By Amount", sortMode == "amount")
     drawButton(2 + buttonWidth + spacing, buttonY, buttonWidth, "By Name", sortMode == "name")
     
-    -- Theme button (right side)
     local themeButtonWidth = 14
     drawButton(w - themeButtonWidth - 1, buttonY, themeButtonWidth, "Theme", false)
     
-    -- Row 2: Filter buttons
     buttonY = buttonY + 1
     drawButton(2, buttonY, buttonWidth, "All", minAmount == 0)
     drawButton(2 + buttonWidth + spacing, buttonY, buttonWidth, "100+", minAmount == 100)
     drawButton(2 + (buttonWidth + spacing) * 2, buttonY, buttonWidth, "1000+", minAmount == 1000)
     drawButton(2 + (buttonWidth + spacing) * 3, buttonY, buttonWidth, "10000+", minAmount == 10000)
     
-    -- Timestamp (bottom right)
     if CONFIG.showTimestamp then
         monitor.setTextColor(COLORS.footerText)
         local timeStr = os.date("%H:%M:%S")
         monitor.setCursorPos(w - #timeStr - 1, buttonY)
         monitor.write(timeStr)
     end
+    
+    return true
 end
 
 -- ===================================
@@ -338,7 +458,6 @@ local function handleClick(x, y)
     local buttonWidth = 11
     local spacing = 1
     
-    -- Sort buttons (row h-2)
     if isInButton(x, y, 2, h - 2, buttonWidth) then
         sortMode = "amount"
         return true
@@ -347,14 +466,12 @@ local function handleClick(x, y)
         return true
     end
     
-    -- Theme button
     local themeButtonWidth = 14
     if isInButton(x, y, w - themeButtonWidth - 1, h - 2, themeButtonWidth) then
         nextTheme()
         return true
     end
     
-    -- Filter buttons (row h-1)
     if isInButton(x, y, 2, h - 1, buttonWidth) then
         minAmount = 0
         return true
@@ -377,6 +494,11 @@ end
 -- ===================================
 
 local function main()
+    -- Initial connection attempt
+    if not connectME() then
+        displayError("Initial connection failed")
+    end
+    
     displayIngots()
     
     while true do
@@ -384,15 +506,25 @@ local function main()
         
         if event == "monitor_touch" then
             if handleClick(x, y) then
-                displayIngots() -- Redraw after button click
+                displayIngots()
             end
         elseif event == "timer" then
-            displayIngots() -- Auto-refresh
+            -- Try to reconnect if disconnected
+            if not checkMEConnection() then
+                print("Connection lost, attempting reconnect...")
+                sleep(CONFIG.reconnectDelay)
+                connectME()
+            end
+            displayIngots()
+        elseif event == "peripheral" or event == "peripheral_detach" then
+            -- Peripheral changed, try to reconnect
+            sleep(1)
+            connectME()
+            displayIngots()
         end
     end
 end
 
--- Auto-refresh timer
 local function autoRefresh()
     while true do
         sleep(CONFIG.refreshRate)
@@ -405,8 +537,8 @@ end
 -- ===================================
 
 print("Starting ME Ingot Display...")
-print("Theme: " .. COLORS.name)
 print("Refresh rate: " .. CONFIG.refreshRate .. "s")
+print("Attempting to connect to ME system...")
 
 -- Run both in parallel
 parallel.waitForAny(main, autoRefresh)
