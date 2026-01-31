@@ -22,6 +22,9 @@ local CONFIG = {
     textScale = 0.5
 }
 
+-- Degree symbol for CP437 encoding (ComputerCraft)
+local DEGREE = string.char(176)
+
 -- Color scheme
 local COLORS = {
     background = colors.black,
@@ -196,15 +199,15 @@ local function displayReactorInfo()
     row = row + 1
     
     local fuelTempColor = getTempColor(data.fuelTemp)
-    drawLabel(2, row, "  Fuel", string.format("%.0f°C", data.fuelTemp), fuelTempColor)
+    drawLabel(2, row, "  Fuel", string.format("%.0f%sC", data.fuelTemp, DEGREE), fuelTempColor)
     row = row + 1
     
     local stackTempColor = getTempColor(data.stackTemp)
-    drawLabel(2, row, "  Stack", string.format("%.0f°C", data.stackTemp), stackTempColor)
+    drawLabel(2, row, "  Stack", string.format("%.0f%sC", data.stackTemp, DEGREE), stackTempColor)
     row = row + 1
     
     local casingTempColor = getTempColor(data.casingTemp)
-    drawLabel(2, row, "  Casing", string.format("%.0f°C", data.casingTemp), casingTempColor)
+    drawLabel(2, row, "  Casing", string.format("%.0f%sC", data.casingTemp, DEGREE), casingTempColor)
     row = row + 2
     
     -- ===== FUEL =====

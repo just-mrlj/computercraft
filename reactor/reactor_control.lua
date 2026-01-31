@@ -26,6 +26,9 @@ local CONFIG = {
     minFuelPercent = 5
 }
 
+-- Degree symbol for CP437 encoding (ComputerCraft)
+local DEGREE = string.char(176)
+
 -- Colors
 local COLORS = {
     background = colors.black,
@@ -235,21 +238,21 @@ local function displayControl()
     monitor.write("Fuel:")
     monitor.setTextColor(tempColor)
     monitor.setCursorPos(9, row)
-    monitor.write(string.format("%.0f°C", data.fuelTemp))
+    monitor.write(string.format("%.0f%sC", data.fuelTemp, DEGREE))
     
     monitor.setTextColor(COLORS.labelText)
     monitor.setCursorPos(20, row)
     monitor.write("Stack:")
     monitor.setTextColor(COLORS.valueText)
     monitor.setCursorPos(28, row)
-    monitor.write(string.format("%.0f°C", data.stackTemp))
+    monitor.write(string.format("%.0f%sC", data.stackTemp, DEGREE))
     
     monitor.setTextColor(COLORS.labelText)
     monitor.setCursorPos(w - 18, row)
     monitor.write("Casing:")
     monitor.setTextColor(COLORS.valueText)
     monitor.setCursorPos(w - 10, row)
-    monitor.write(string.format("%.0f°C", data.casingTemp))
+    monitor.write(string.format("%.0f%sC", data.casingTemp, DEGREE))
     row = row + 2
     
     -- ===== FUEL =====
@@ -339,7 +342,7 @@ end
 
 print("Starting Reactor Control Center...")
 print("Auto-shutdown enabled: " .. tostring(CONFIG.autoShutdown))
-print("Max temperature: " .. CONFIG.maxTemp .. "°C")
+print("Max temperature: " .. CONFIG.maxTemp .. DEGREE .. "C")
 print("Press Ctrl+T to stop")
 
 parallel.waitForAny(main, autoRefresh)
