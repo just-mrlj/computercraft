@@ -1,21 +1,17 @@
 -- ===================================
--- BIGGER REACTORS MONITOR
--- Real-time reactor monitoring
+-- BIGGER REACTORS MONITOR (Updated)
+-- Works with active() battery() API
 -- ===================================
 
 local monitor = peripheral.find("monitor")
-local reactor = peripheral.find("BiggerReactors_Reactor")
-
-if not reactor then
-    reactor = peripheral.find("BigReactors-Reactor")
-end
+local reactor = peripheral.wrap("BiggerReactors_Reactor_0")
 
 if not monitor then
     error("No monitor found!")
 end
 
 if not reactor then
-    error("No reactor found! Run reactor_discovery first.")
+    error("No reactor found!")
 end
 
 -- ===================================
@@ -23,9 +19,8 @@ end
 -- ===================================
 
 local CONFIG = {
-    refreshRate = 1,  -- Update every second
-    textScale = 0.5,
-    tempUnits = "C"   -- C or K
+    refreshRate = 1,
+    textScale = 0.5
 }
 
 -- Color scheme
@@ -94,10 +89,6 @@ local function drawLabel(x, y, label, value, valueColor)
     monitor.write(tostring(value))
 end
 
-local function getStatusColor(active)
-    return active and COLORS.goodValue or COLORS.offline
-end
-
 local function getTempColor(temp)
     if temp < 1000 then
         return COLORS.goodValue
@@ -131,17 +122,21 @@ local function displayReactorInfo()
     
     -- ===== GET REACTOR DATA =====
     local success, data = pcall(function()
+        local batteryInfo = reactor.battery()
+        local fuelInfo = reactor.fuelTank()
+        
         return {
-            active = reactor.getActive(),
-            energy = reactor.getEnergyStored(),
-            energyCapacity = reactor.getEnergyCapacity(),
-            energyProduction = reactor.getEnergyProducedLastTick(),
-            fuelTemp = reactor.getFuelTemperature(),
-            casingTemp = reactor.getCasingTemperature(),
-            fuel = reactor.getFuelAmount(),
-            fuelCapacity = reactor.getFuelCapacity(),
-            waste = reactor.getWasteAmount(),
-            fuelConsumption = reactor.getFuelConsumedLastTick()
+            active = reactor.active(),
+            energy = batteryInfo.stored,
+            energyCapacity = batteryInfo.capacity,
+            energyProduction = batteryInfo.producedLastTick,
+            fuelTemp = reactor.fuelTemperature(),
+            casingTemp = reactor.casingTemperature(),
+            stackTemp = reactor.stackTemperature(),
+            fuel = fuelInfo.fuel,
+            fuelCapacity = fuelInfo.capacity,
+            waste = fuelInfo.waste,
+            fuelConsumption = fuelInfo.burnedLastTick or 0
         }
     end)
     
@@ -150,7 +145,7 @@ local function displayReactorInfo()
         monitor.setCursorPos(2, 3)
         monitor.write("ERROR: Cannot read reactor data")
         monitor.setCursorPos(2, 4)
-        monitor.write("Connection lost?")
+        monitor.write(tostring(data))
         return
     end
     
@@ -158,7 +153,7 @@ local function displayReactorInfo()
     
     -- ===== STATUS =====
     local statusText = data.active and "ONLINE" or "OFFLINE"
-    local statusColor = getStatusColor(data.active)
+    local statusColor = data.active and COLORS.goodValue or COLORS.offline
     
     monitor.setCursorPos(2, row)
     monitor.setTextColor(COLORS.labelText)
@@ -197,6 +192,10 @@ local function displayReactorInfo()
     
     local fuelTempColor = getTempColor(data.fuelTemp)
     drawLabel(2, row, "  Fuel", string.format("%.0f°C", data.fuelTemp), fuelTempColor)
+    row = row + 1
+    
+    local stackTempColor = getTempColor(data.stackTemp)
+    drawLabel(2, row, "  Stack", string.format("%.0f°C", data.stackTemp), stackTempColor)
     row = row + 1
     
     local casingTempColor = getTempColor(data.casingTemp)
