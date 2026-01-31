@@ -239,7 +239,7 @@ local function displayReactorInfo()
         row = row + 1
     end
     
-    drawLabel(2, row, "  Reactivity", string.format("%.2f%%", data.fuelReactivity))
+    drawLabel(2, row, "  Reactivity", string.format("%.2f%%", data.fuelReactivity * 100))
     row = row + 2
     
     -- ===== WASTE =====
