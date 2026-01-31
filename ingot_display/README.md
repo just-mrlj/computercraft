@@ -1,0 +1,1 @@
+![Screenshot of the live_ingot_control_center.lua in action](https://github.com/just-mrlj/computercraft/blob/main/src/ingot_display.png?raw=true)
