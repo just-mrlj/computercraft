@@ -1,6 +1,5 @@
 -- ===================================
--- BIGGER REACTORS CONTROL CENTER (Updated)
--- Monitor with touch controls
+-- BIGGER REACTORS CONTROL CENTER
 -- ===================================
 
 local monitor = peripheral.find("monitor")
@@ -155,16 +154,16 @@ local function displayControl()
         
         return {
             active = reactor.active(),
-            energy = batteryInfo.stored,
-            energyCapacity = batteryInfo.capacity,
-            energyProduction = batteryInfo.producedLastTick,
+            energy = batteryInfo.stored(),
+            energyCapacity = batteryInfo.capacity(),
+            energyProduction = batteryInfo.producedLastTick(),
             fuelTemp = reactor.fuelTemperature(),
             casingTemp = reactor.casingTemperature(),
             stackTemp = reactor.stackTemperature(),
-            fuel = fuelInfo.fuel,
-            fuelCapacity = fuelInfo.capacity,
-            waste = fuelInfo.waste,
-            fuelConsumption = fuelInfo.burnedLastTick or 0
+            fuel = fuelInfo.fuel(),
+            fuelCapacity = fuelInfo.capacity(),
+            waste = fuelInfo.waste(),
+            fuelConsumption = fuelInfo.burnedLastTick and fuelInfo.burnedLastTick() or 0
         }
     end)
     

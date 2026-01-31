@@ -1,6 +1,5 @@
 -- ===================================
--- BIGGER REACTORS MONITOR (Updated)
--- Works with active() battery() API
+-- BIGGER REACTORS MONITOR
 -- ===================================
 
 local monitor = peripheral.find("monitor")
@@ -127,16 +126,21 @@ local function displayReactorInfo()
         
         return {
             active = reactor.active(),
-            energy = batteryInfo.stored,
-            energyCapacity = batteryInfo.capacity,
-            energyProduction = batteryInfo.producedLastTick,
+            -- Battery info
+            energy = batteryInfo.stored(),
+            energyCapacity = batteryInfo.capacity(),
+            energyProduction = batteryInfo.producedLastTick(),
+            -- Temperatures
             fuelTemp = reactor.fuelTemperature(),
             casingTemp = reactor.casingTemperature(),
             stackTemp = reactor.stackTemperature(),
-            fuel = fuelInfo.fuel,
-            fuelCapacity = fuelInfo.capacity,
-            waste = fuelInfo.waste,
-            fuelConsumption = fuelInfo.burnedLastTick or 0
+            -- Fuel info
+            fuel = fuelInfo.fuel(),
+            fuelCapacity = fuelInfo.capacity(),
+            waste = fuelInfo.waste(),
+            fuelReactivity = fuelInfo.fuelReactivity(),
+            -- Burn rate might not exist in all versions
+            fuelConsumption = fuelInfo.burnedLastTick and fuelInfo.burnedLastTick() or 0
         }
     end)
     
@@ -144,7 +148,8 @@ local function displayReactorInfo()
         monitor.setTextColor(COLORS.badValue)
         monitor.setCursorPos(2, 3)
         monitor.write("ERROR: Cannot read reactor data")
-        monitor.setCursorPos(2, 4)
+        monitor.setCursorPos(2, 5)
+        monitor.setTextColor(COLORS.labelText)
         monitor.write(tostring(data))
         return
     end
@@ -226,7 +231,12 @@ local function displayReactorInfo()
     monitor.write(string.format("%.1f%%", fuelPercent * 100))
     row = row + 2
     
-    drawLabel(2, row, "  Burn Rate", formatNumber(data.fuelConsumption) .. " mB/t")
+    if data.fuelConsumption > 0 then
+        drawLabel(2, row, "  Burn Rate", formatNumber(data.fuelConsumption) .. " mB/t")
+        row = row + 1
+    end
+    
+    drawLabel(2, row, "  Reactivity", string.format("%.2f%%", data.fuelReactivity))
     row = row + 2
     
     -- ===== WASTE =====
