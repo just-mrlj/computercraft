@@ -4,7 +4,7 @@
 -- ===================================
 
 local monitor = peripheral.find("monitor")
-local reactor = peripheral.find("BiggerReactors_Reactor_0")
+local reactor = peripheral.find("BiggerReactors_Reactor")
 
 if not reactor then
     reactor = peripheral.find("BigReactors-Reactor")
