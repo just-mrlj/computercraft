@@ -44,6 +44,9 @@ Navigate through the menu to customize everything!
 - Label + date & time
 - Label + blinking "ONLINE" status
 
+> [!NOTE]
+> Just a prove of concept, no actual use so far tbh.
+
 -----------------------------------------------------------
 Quick Example:
 Simple Label:
